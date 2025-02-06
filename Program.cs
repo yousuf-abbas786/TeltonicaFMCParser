@@ -253,10 +253,16 @@ namespace TeltonicaFMCParser
             string rawFolderPath = Path.Combine(projectRoot, @"20250106\Parser\Raw");
             string dataFolderPath = Path.Combine(projectRoot, @"20250106\Parser\Data");
 
-            var deviceFiles = GetMessagesFromFiles(hexaFolderPath);
+            //var deviceFiles = GetMessagesFromFiles(hexaFolderPath);
 
-            await GenerateLogsAsync(rawFolderPath, deviceFiles);
-            await GenerateLogsAsync(dataFolderPath, deviceFiles, "data");
+            string path = @"C:\Projects\TeltonicaFMCParser\20250106\hexa\357544372173589.hexa";
+            var deviceFile = GetMessagesFromFile(path);
+            ProcessDeviceFile(rawFolderPath, deviceFile, "raw");
+            ProcessDeviceFile(dataFolderPath, deviceFile, "data");
+
+            //await GenerateLogsAsync(rawFolderPath, deviceFiles);
+            //await GenerateLogsAsync(dataFolderPath, deviceFiles, "data");
+            Console.WriteLine("process finished");
             Console.ReadLine();
         }
 
@@ -617,6 +623,42 @@ namespace TeltonicaFMCParser
 
             Console.WriteLine("All files read !");
             return retVal;
+        }
+
+        static DeviceFile GetMessagesFromFile(string currentFile)
+        {
+            StringBuilder fileStringBuilder = new StringBuilder();
+
+            string imei = string.Empty;
+            var lines = File.ReadAllLines(currentFile);
+            DeviceFile deviceFile = new DeviceFile();
+            foreach (string line in lines)
+            {
+                var lineSPlitArr = line.Split(new string[] { ":" }, StringSplitOptions.RemoveEmptyEntries);
+
+                var message = lineSPlitArr.Last().Trim();
+
+                if (message.Length == 50)
+                {
+                    imei = DecodeImei(message.Replace("-", ""));
+                }
+                else if (message.Length > 100)
+                {
+                    if (string.IsNullOrEmpty(imei))
+                    {
+                        imei = currentFile.Split(new string[] { "." }, StringSplitOptions.RemoveEmptyEntries).First().Split(new string[] { "\\" }, StringSplitOptions.RemoveEmptyEntries).Last();
+                    }
+
+                    deviceFile.IMEI = imei;
+                    deviceFile.Path = currentFile;
+                    deviceFile.Messages.Add(new DeviceMessage { LineSplitArr = lineSPlitArr, Message = message });
+
+                }
+            }
+            
+
+            Console.WriteLine("All files read !");
+            return deviceFile;
         }
 
         static void ProcessDeviceFile(string path, DeviceFile deviceFile, string type)
